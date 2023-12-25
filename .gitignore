@@ -1,1 +1,123 @@
-node_moduled/
+#include <stdio.h>
+#include <stdlib.h>
+
+// Process structure
+typedef struct {
+    int process_id;
+    int priority;
+    int burst_time;
+    int waiting_time;
+} Process;
+
+// Function to perform MLQ scheduling with ageing
+void multilevelQueueScheduling(Process processes[], int num_processes) {
+    // Assuming two queues: High priority (Queue 1) and Low priority (Queue 2)
+    int time_quantum_high = 3;  // Time quantum for high priority queue
+    int time_quantum_low = 6;   // Time quantum for low priority queue
+    int ageing_threshold = 10;  // Ageing threshold
+
+    int current_time = 0;
+
+    printf("\nSequence of Processes:\n");
+
+    // Run processes in both queues until all are completed
+    while (1) {
+        int flag = 0;  // Flag to check if any process was executed
+
+        // Ageing: Increase priority of waiting processes in the low priority queue
+        for (int i = 0; i < num_processes; i++) {
+            if (processes[i].priority == 2 && processes[i].burst_time > 0) {
+                processes[i].waiting_time++;
+                if (processes[i].waiting_time >= ageing_threshold) {
+                    processes[i].priority = 1;  // Increase priority
+                    processes[i].waiting_time = 0;  // Reset waiting time
+                }
+            }
+        }
+
+        // Execute processes in the high priority queue
+        for (int i = 0; i < num_processes; i++) {
+            if (processes[i].priority == 1 && processes[i].burst_time > 0) {
+                flag = 1;
+                printf("Process %d (Priority %d) executed for %d units.\n", processes[i].process_id, processes[i].priority, time_quantum_high);
+
+                if (processes[i].burst_time > time_quantum_high) {
+                    current_time += time_quantum_high;
+                    processes[i].burst_time -= time_quantum_high;
+                } else {
+                    current_time += processes[i].burst_time;
+                    processes[i].waiting_time = current_time - processes[i].burst_time;
+                    processes[i].burst_time = 0;
+                }
+            }
+        }
+
+        // Execute processes in the low priority queue
+        for (int i = 0; i < num_processes; i++) {
+            if (processes[i].priority == 2 && processes[i].burst_time > 0) {
+                flag = 1;
+                printf("Process %d (Priority %d) executed for %d units.\n", processes[i].process_id, processes[i].priority, time_quantum_low);
+
+                if (processes[i].burst_time > time_quantum_low) {
+                    current_time += time_quantum_low;
+                    processes[i].burst_time -= time_quantum_low;
+                } else {
+                    current_time += processes[i].burst_time;
+                    processes[i].waiting_time = current_time - processes[i].burst_time;
+                    processes[i].burst_time = 0;
+                }
+            }
+        }
+
+        // If no process was executed, break the loop
+        if (!flag)
+            break;
+    }
+}
+
+// Function to calculate and display average waiting time
+void calculateAverageWaitingTime(Process processes[], int num_processes) {
+    double total_waiting_time = 0;
+
+    for (int i = 0; i < num_processes; i++) {
+        total_waiting_time += processes[i].waiting_time;
+    }
+
+    double average_waiting_time = total_waiting_time / num_processes;
+    printf("\nAverage Waiting Time: %.2lf\n", average_waiting_time);
+}
+
+int main() {
+    int num_processes;
+
+    printf("Enter the number of processes: ");
+    scanf("%d", &num_processes);
+
+    // Dynamically allocate memory for processes
+    Process *processes = (Process *)malloc(num_processes * sizeof(Process));
+
+    // Input process details from the user
+    for (int i = 0; i < num_processes; i++) {
+        printf("Enter details for Process %d:\n", i + 1);
+        processes[i].process_id = i + 1;
+
+        printf("Priority: ");
+        scanf("%d", &processes[i].priority);
+
+        printf("Burst Time: ");
+        scanf("%d", &processes[i].burst_time);
+
+        processes[i].waiting_time = 0;  // Initialize waiting time
+    }
+
+    // Perform MLQ scheduling with ageing
+    multilevelQueueScheduling(processes, num_processes);
+
+    // Display the average waiting time
+    calculateAverageWaitingTime(processes, num_processes);
+
+    // Free dynamically allocated memory
+    free(processes);
+
+    return 0;
+}
